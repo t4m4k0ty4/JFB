@@ -1,0 +1,57 @@
+[project]
+name = "JFBench"
+description = "A benchmark for evaluating the performance of JSON formatters in large language models (LLMs). This project provides a interface for testing llm performance on extractiong and formating raw data into JSON format based on user's test cases."
+authors = [
+    { name = "Mikhail Kotov", email = "m.a.k0tov@yandex.ru"}
+    ]
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "ruff>=0.15.1",
+]
+
+# -----------------------------------------------------------------------------
+# Ruff settings
+# -----------------------------------------------------------------------------
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+src = ["."]
+fix = true
+unsafe-fixes = false
+preview = false
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "UP", # pyupgrade
+]
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+ignore = [
+    "E501", # line too long, handled by formatter
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+# Точечные исключения по файлам/маскам (пример для тестов).
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "tab"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
