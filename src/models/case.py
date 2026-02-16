@@ -34,6 +34,7 @@ class CaseManager:
 
     CASE_DIR_NAME = "cases"
     SCHEMAS_DIR_NAME = "schemas"
+    RUN_CONFIG_DIR_NAME = "runs"
 
     def __init__(self, dir: str | Path, create: bool) -> None:
         self.is_directory_valid = False
@@ -44,6 +45,7 @@ class CaseManager:
         self.__validate_case_directory(dir_name, create)
         self.cases_dir = self.root_dir / self.CASE_DIR_NAME
         self.schemas_dir = self.root_dir / self.SCHEMAS_DIR_NAME
+        self.run_config_dir = self.root_dir / self.RUN_CONFIG_DIR_NAME
         self.__validate_cases_directory_structure(create)
 
     def __validate_cases_directory_structure(self, create: bool) -> None:
@@ -55,6 +57,7 @@ class CaseManager:
     def __init_case_directory_structure(self) -> None:
         self.cases_dir.mkdir(parents=True, exist_ok=True)
         self.schemas_dir.mkdir(parents=True, exist_ok=True)
+        self.run_config_dir.mkdir(parents=True, exist_ok=True)
         self.is_directory_structure_valid = True
 
     def __check_case_directory_structure(self) -> None:
@@ -62,6 +65,8 @@ class CaseManager:
             raise FileNotFoundError(f"Cases directory '{self.cases_dir}' does not exist.")
         if not self.schemas_dir.exists():
             raise FileNotFoundError(f"Schemas directory '{self.schemas_dir}' does not exist.")
+        if not self.run_config_dir.exists():
+            raise FileNotFoundError(f"Run configuration directory '{self.run_config_dir}' does not exist.")
 
         self.is_directory_structure_valid = True
 
