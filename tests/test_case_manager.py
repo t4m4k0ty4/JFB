@@ -1,8 +1,9 @@
 import errno
 from pathlib import Path
 
+import polars as pl
 import pytest
-from models.case import CaseManager
+from models.case import CaseManager, RunConfigEntry
 
 
 @pytest.fixture
@@ -113,3 +114,58 @@ class TestCaseManager:
         manager._remove_cases_directory()
 
         assert not root_dir.exists()
+
+    def test_load_run_config_from_csv_returns_entries(self, existing_cases_root: Path) -> None:
+        """Load run configuration rows from CSV file into typed entries."""
+        run_config_path = existing_cases_root / "runs" / "test_run.csv"
+        run_config_path.write_text(
+            "model_id,case_name\nmodel-a,case-1\nmodel-b,case-2\n",
+            encoding="utf-8",
+        )
+        manager = CaseManager(existing_cases_root, create=False)
+
+        entries = manager.load_run_config("test_run.csv")
+
+        assert len(entries) == 2
+        assert all(isinstance(entry, RunConfigEntry) for entry in entries)
+        assert [(entry.model_id, entry.case_name) for entry in entries] == [
+            ("model-a", "case-1"),
+            ("model-b", "case-2"),
+        ]
+
+    def test_load_run_config_from_xlsx_returns_entries(
+        self, existing_cases_root: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Load run configuration rows from XLSX file into typed entries."""
+        run_config_path = existing_cases_root / "runs" / "test_run.xlsx"
+        run_config_path.write_bytes(b"placeholder")
+        manager = CaseManager(existing_cases_root, create=False)
+
+        def fake_read_excel(path: Path, schema_overrides: pl.Schema) -> pl.DataFrame:
+            assert path == run_config_path
+            assert schema_overrides == pl.Schema({"model_id": pl.Utf8, "case_name": pl.Utf8})
+            return pl.DataFrame({"model_id": ["model-a"], "case_name": ["case-1"]})
+
+        monkeypatch.setattr(pl, "read_excel", fake_read_excel)
+
+        entries = manager.load_run_config("test_run.xlsx")
+
+        assert len(entries) == 1
+        assert entries[0].model_id == "model-a"
+        assert entries[0].case_name == "case-1"
+
+    def test_load_run_config_raises_for_missing_file(self, existing_cases_root: Path) -> None:
+        """Raise FileNotFoundError when run configuration file is absent."""
+        manager = CaseManager(existing_cases_root, create=False)
+
+        with pytest.raises(FileNotFoundError, match="does not exist"):
+            manager.load_run_config("missing.csv")
+
+    def test_load_run_config_raises_for_unsupported_format(self, existing_cases_root: Path) -> None:
+        """Raise ValueError for unsupported run configuration file extension."""
+        run_config_path = existing_cases_root / "runs" / "test_run.json"
+        run_config_path.write_text("{}", encoding="utf-8")
+        manager = CaseManager(existing_cases_root, create=False)
+
+        with pytest.raises(ValueError, match="Unsupported run configuration file format"):
+            manager.load_run_config("test_run.json")

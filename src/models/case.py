@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 
 RUN_CONFIG_SCHEMA = pl.Schema(
     {
-        "model_ids": pl.List(pl.Utf8),
-        "case_names": pl.List(pl.Utf8),
+        "model_id": pl.Utf8,
+        "case_name": pl.Utf8,
     }
 )
 
@@ -24,6 +24,13 @@ class Case(BaseModel):
     )
     schema_: str = Field(
         title="JSON schema name", description="Name of the JSON schema to validate against.", alias="schema"
+    )
+
+
+class RunConfigEntry(BaseModel):
+    model_id: str = Field(title="Model ID", description="The identifier of the LLM model to be tested.")
+    case_name: str = Field(
+        title="System prompt", description="The system prompt to be used when generating responses with the LLM."
     )
 
 
@@ -44,6 +51,8 @@ class CaseManager:
     PROMPT_DIR_NAME = "prompts"
     SCHEMAS_DIR_NAME = "schemas"
     RUN_CONFIG_DIR_NAME = "runs"
+
+    VALID_RUN_CONFIG_FORMATS = {".csv", ".xlsx"}
 
     def __init__(self, dir: str | Path, create: bool) -> None:
         self.is_directory_valid = False
@@ -132,3 +141,20 @@ class CaseManager:
 
         case_dict = orjson.loads(case_path.read_bytes())
         return Case.model_validate(case_dict)
+
+    def load_run_config(self, config_name: str) -> list[RunConfigEntry]:
+        config_path = self.run_config_dir / f"{config_name}"
+        if not config_path.exists():
+            raise FileNotFoundError(f"Run configuration file '{config_path}' does not exist.")
+
+        suffix = config_path.suffix.lower()
+        if suffix not in self.VALID_RUN_CONFIG_FORMATS:
+            raise ValueError(f"Unsupported run configuration file format '{suffix}'. Only .csv and .xlsx are supported")
+
+        if suffix == ".csv":
+            df = pl.read_csv(config_path, schema=RUN_CONFIG_SCHEMA)
+        else:
+            df = pl.read_excel(config_path, schema_overrides=RUN_CONFIG_SCHEMA)
+
+        run_configs = [RunConfigEntry.model_validate(row) for row in df.to_dicts()]
+        return run_configs
