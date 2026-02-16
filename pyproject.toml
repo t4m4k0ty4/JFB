@@ -7,13 +7,24 @@ authors = [
 version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "jsonschema>=4.26.0",
+    "orjson>=3.11.7",
+    "pydantic>=2.12.5",
+]
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "ruff>=0.15.1",
 ]
+
+# -----------------------------------------------------------------------------
+# UV settings
+# -----------------------------------------------------------------------------
+[tool.uv]
+package = true
 
 # -----------------------------------------------------------------------------
 # Ruff settings
@@ -39,19 +50,16 @@ select = [
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-ignore = [
-    "E501", # line too long, handled by formatter
-]
-fixable = ["ALL"]
-unfixable = []
-
 [tool.ruff.lint.per-file-ignores]
 # Точечные исключения по файлам/маскам (пример для тестов).
 
 [tool.ruff.format]
 quote-style = "double"
-indent-style = "tab"
+indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "lf"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -2,6 +2,21 @@ import errno
 import re
 from pathlib import Path
 from shutil import rmtree
+from typing import Any
+
+import orjson
+from pydantic import BaseModel, Field
+
+
+class Case(BaseModel):
+    raw: str = Field(title="raw source data", description="Raw case data as a string.")
+    expected_value: dict[str, Any] = Field(
+        title="Expacted valid result of LLM generation",
+        description="Expected valid result of LLM generation as a dictionary.",
+    )
+    schema_: str = Field(
+        title="JSON schema name", description="Name of the JSON schema to validate against.", alias="schema"
+    )
 
 
 class CaseManager:
@@ -91,3 +106,11 @@ class CaseManager:
 
             if len(part.encode("utf-8")) > MAX_NAME_BYTES:
                 raise ValueError(f"Directory name component '{part}' exceeds {MAX_NAME_BYTES} bytes.")
+
+    def load_case(self, case_name: str) -> Case:
+        case_path = self.cases_dir / f"{case_name}.json"
+        if not case_path.exists():
+            raise FileNotFoundError(f"Case file '{case_path}' does not exist.")
+
+        case_dict = orjson.loads(case_path.read_bytes())
+        return Case.model_validate(case_dict)
