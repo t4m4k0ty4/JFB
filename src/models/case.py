@@ -142,8 +142,14 @@ class CaseManager:
         case_dict = orjson.loads(case_path.read_bytes())
         return Case.model_validate(case_dict)
 
-    def load_run_config(self, config_name: str) -> list[RunConfigEntry]:
-        config_path = self.run_config_dir / f"{config_name}"
+    def load_run_config(self, config_name: str | Path) -> list[RunConfigEntry]:
+        config_path = Path(config_name)
+        if not config_path.is_absolute():
+            if config_path.exists():
+                config_path = config_path.absolute()
+            else:
+                config_path = self.run_config_dir / config_path
+
         if not config_path.exists():
             raise FileNotFoundError(f"Run configuration file '{config_path}' does not exist.")
 

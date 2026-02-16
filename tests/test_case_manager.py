@@ -133,6 +133,21 @@ class TestCaseManager:
             ("model-b", "case-2"),
         ]
 
+    def test_load_run_config_from_absolute_external_csv_path(self, existing_cases_root: Path, tmp_path: Path) -> None:
+        """Load run configuration from absolute CSV path outside default runs directory."""
+        external_run_config_path = (tmp_path / "external_run.csv").absolute()
+        external_run_config_path.write_text(
+            "model_id,case_name\nmodel-a,case-1\n",
+            encoding="utf-8",
+        )
+        manager = CaseManager(existing_cases_root, create=False)
+
+        entries = manager.load_run_config(external_run_config_path)
+
+        assert len(entries) == 1
+        assert entries[0].model_id == "model-a"
+        assert entries[0].case_name == "case-1"
+
     def test_load_run_config_from_xlsx_returns_entries(
         self, existing_cases_root: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -8,6 +8,7 @@ version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "click>=8.3.1",
     "deepdiff>=8.6.1",
     "jsonschema>=4.26.0",
     "lmstudio>=1.5.0",
@@ -16,6 +17,9 @@ dependencies = [
     "pydantic>=2.12.5",
     "xlsxwriter>=3.2.9",
 ]
+
+[project.scripts]
+jfb = "models.cli:main"
 
 [dependency-groups]
 dev = [
