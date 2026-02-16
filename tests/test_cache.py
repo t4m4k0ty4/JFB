@@ -1,4 +1,4 @@
-from models.cache import LRUCache
+from models.repositories.cache import LRUCache
 
 
 class TestLRUCache:

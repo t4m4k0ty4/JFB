@@ -12,6 +12,7 @@ def existing_cases_root(tmp_path: Path) -> Path:
     (root_dir / "cases").mkdir(parents=True)
     (root_dir / "schemas").mkdir(parents=True)
     (root_dir / "runs").mkdir(parents=True)
+    (root_dir / "prompts").mkdir(parents=True)
     return root_dir
 
 

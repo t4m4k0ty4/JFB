@@ -4,7 +4,7 @@ import orjson
 import pytest
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
-from models.schema import SchemaEntry, SchemaRepository, validate_schema_file_path
+from models.repositories.schema import SchemaEntry, SchemaRepository, validate_file_path
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ class TestSchemaRepository:
     def test_validate_schema_file_path_raises_for_relative_paths(self, path_value: str | Path) -> None:
         """Raise ValueError when schema path is not absolute."""
         with pytest.raises(ValueError, match="must be absolute"):
-            validate_schema_file_path(path_value)
+            validate_file_path(path_value)
 
     @pytest.mark.parametrize("as_string", [False, True])
     def test_validate_schema_file_path_accepts_absolute_paths(self, tmp_path: Path, as_string: bool) -> None:
@@ -43,7 +43,7 @@ class TestSchemaRepository:
         absolute_path = (tmp_path / "schema.json").absolute()
         path_value = str(absolute_path) if as_string else absolute_path
 
-        assert validate_schema_file_path(path_value) == absolute_path
+        assert validate_file_path(path_value) == absolute_path
 
     def test_add_schema_stores_schema_entry(self, schema_repository: SchemaRepository, valid_schema_file: Path) -> None:
         """Store parsed schema and compiled validator in cache."""

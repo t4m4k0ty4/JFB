@@ -5,7 +5,15 @@ from shutil import rmtree
 from typing import Any
 
 import orjson
+import polars as pl
 from pydantic import BaseModel, Field
+
+RUN_CONFIG_SCHEMA = pl.Schema(
+    {
+        "model_ids": pl.List(pl.Utf8),
+        "case_names": pl.List(pl.Utf8),
+    }
+)
 
 
 class Case(BaseModel):
@@ -33,6 +41,7 @@ class CaseManager:
     """
 
     CASE_DIR_NAME = "cases"
+    PROMPT_DIR_NAME = "prompts"
     SCHEMAS_DIR_NAME = "schemas"
     RUN_CONFIG_DIR_NAME = "runs"
 
@@ -46,6 +55,7 @@ class CaseManager:
         self.cases_dir = self.root_dir / self.CASE_DIR_NAME
         self.schemas_dir = self.root_dir / self.SCHEMAS_DIR_NAME
         self.run_config_dir = self.root_dir / self.RUN_CONFIG_DIR_NAME
+        self.prompts_dir = self.root_dir / self.PROMPT_DIR_NAME
         self.__validate_cases_directory_structure(create)
 
     def __validate_cases_directory_structure(self, create: bool) -> None:
@@ -58,6 +68,7 @@ class CaseManager:
         self.cases_dir.mkdir(parents=True, exist_ok=True)
         self.schemas_dir.mkdir(parents=True, exist_ok=True)
         self.run_config_dir.mkdir(parents=True, exist_ok=True)
+        self.prompts_dir.mkdir(parents=True, exist_ok=True)
         self.is_directory_structure_valid = True
 
     def __check_case_directory_structure(self) -> None:
@@ -67,6 +78,8 @@ class CaseManager:
             raise FileNotFoundError(f"Schemas directory '{self.schemas_dir}' does not exist.")
         if not self.run_config_dir.exists():
             raise FileNotFoundError(f"Run configuration directory '{self.run_config_dir}' does not exist.")
+        if not self.prompts_dir.exists():
+            raise FileNotFoundError(f"Prompts directory '{self.prompts_dir}' does not exist.")
 
         self.is_directory_structure_valid = True
 
