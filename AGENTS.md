@@ -1,93 +1,67 @@
-# JFBench Agent Guide
+# CLAUDE.md
 
-This repository implements JFBench, a benchmark for evaluating how well LLMs
-extract and format raw input into JSON that matches expected schemas.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Use this file as a practical, project-specific guide for making safe changes
-with minimal back-and-forth.
+## What This Project Is
 
-## Runtime and Tooling
+JFBench is a CLI tool for benchmarking LLM models on JSON extraction tasks. It runs models against test cases, validates their JSON output against schemas, and measures quality metrics (`similarity`, `field_match`, `value_match`).
 
-- Python version: `>=3.13`
-- Dependency manager and runner: `uv`
-- Test runner: `pytest`
-- Linter/formatter: `ruff`
-- Source layout: `src/` (imports in tests use `models.*`)
+## Commands
 
-## Project Structure
+```bash
+# Install dependencies
+uv sync --dev
 
-- `src/models/case.py`
-  - Validates and initializes benchmark directory structure.
-  - Expected directories: `cases`, `schemas`, `prompts`, `runs`.
-- `src/models/estimator.py`
-  - Computes similarity/field/value match metrics for run outputs.
-- `src/models/report.py`
-  - Builds a `polars.DataFrame` from run rows and exports to Excel.
-- `src/models/llm_clients/`
-  - `client.py`: provider adapter contract and LM Studio implementation.
-  - `__init__.py`: manager/factory that returns provider adapters.
-- `src/models/repositories/`
-  - `cache.py`: shared `LRUCache`.
-  - `schema.py`: schema caching and validator compilation.
-  - `prompt.py`: prompt text caching.
-  - `__init__.py`: shared file path validation helpers.
+# Run all tests
+uv run pytest -q tests
 
-## Source of Truth Rules
+# Run a single test file
+uv run pytest -q tests/<target_test>.py
 
-- For repositories/caching logic, use modules under `src/models/repositories/`.
-- Keep public behavior aligned with tests in `tests/`.
-- If you change method contracts, update corresponding tests in the same change.
+# Lint and format
+uv run ruff format <changed_paths>
+uv run ruff check <changed_paths>
 
-## LLM Client Rules
+# Type check (LLM clients specifically)
+uv run pyright tests/test_llm_clients.py
 
-- `api_host` must be in `host:port` format (no URL scheme).
-  - Good: `localhost:1234`
-  - Bad: `http://localhost:1234`
-- LM Studio adapter is designed as long-lived.
-  - Do not silently recreate/close client per request unless explicitly required.
-  - Keep explicit close semantics clear and deterministic.
-- Ensure model lifecycle cleanup (`unload`) is exception-safe.
+# Install pre-commit hooks
+uv run pre-commit install
 
-## Repository Caching Rules
+# Run pre-commit on all files
+uv run pre-commit run --all-files
 
-- File path input must be absolute for repository loaders.
-- Cache key versioning should include file metadata (`st_mtime_ns`, `st_size`).
-- Repeated access to unchanged files should avoid extra disk reads.
-- Changed files should invalidate stale cache entries automatically.
+# Initialize a benchmark directory
+uv run jfb --new /path/to/benchmark
 
-## Report Module Rules
+# Run a benchmark
+uv run jfb /path/to/benchmark lmstudio demo.csv /path/to/results.csv --api-host localhost:1234 -v
+```
 
-- `Report.generate` accepts row-like data and applies configured schema.
-- Excel export requires `xlsxwriter` dependency.
-- Preserve report columns defined by `DEFAULT_SCHEMA`.
+## Architecture
 
-## Development Rules
+The CLI pipeline in `src/models/cli.py` orchestrates the full run:
 
-- Write clean and readable code.
-- Follow PEP 8.
-- Prefer explicit, typed function signatures.
-- Use Google-style docstrings for public classes/functions.
-- Avoid duplication; extract reusable helpers.
-- Prefer safe, defensive behavior for I/O, validation, and resource cleanup.
+1. `CaseManager` (`case.py`) — validates/creates the benchmark directory (`cases/`, `schemas/`, `prompts/`, `runs/`) and loads cases and run configs (CSV/XLSX).
+2. `SchemaRepository` / `PromptRepository` (`repositories/`) — file-backed caches (built on `LRUCache`) for JSON schemas and system prompts. Cache keys include `st_mtime_ns` and `st_size` for automatic invalidation on file changes. File paths must be absolute.
+3. `LLMClientManager` / `LMStudioClientAdapter` (`llm_clients/`) — factory and adapter for LLM providers. Currently only `lmstudio` is supported. Adapters are long-lived and reused per unique system prompt. `api_host` must be `host:port` without a URL scheme.
+4. `Estimator` (`estimator.py`) — computes flat-key similarity metrics between expected and actual JSON dicts using `deepdiff`. Scores are stored by run ID.
+5. `Report` (`report.py`) — builds a `polars.DataFrame` from result rows and writes to `.csv` or `.xlsx` (`xlsxwriter` required for Excel).
 
-## Verification Workflow (Run After Changes)
+**Data flow per benchmark entry**: load case → compile schema → load prompt → get/create adapter → call LLM → validate response → compute scores → append row.
 
-1. Format changed files:
-   - `ruff format <paths>`
-2. Run lint checks:
-   - `ruff check <paths>`
-3. Run targeted tests first, then full suite:
-   - `uv run pytest -q tests/<target_test>.py`
-   - `uv run pytest -q tests`
-4. If typing-sensitive tests were touched (especially `llm_clients`):
-   - `uv run pyright tests/test_llm_clients.py`
+## Key Constraints
 
-## Unit Test Guidelines
+- `api_host` format: `host:port` only (e.g. `localhost:1234`), no `http://` prefix.
+- Repository file paths must be absolute.
+- Run config CSV/XLSX must have columns: `model_id`, `case_name`.
+- Case JSON files must have: `raw`, `expected_value`, `schema` (filename in `schemas/`).
+- Output path must end in `.csv` or `.xlsx`.
+- Adapter lifecycle: always call `adapter.close()` — `LMStudioClientAdapter` unloads the model after each `generate_response` call.
 
-- Use `pytest.mark.parametrize` for matrix-like scenarios.
-- Use fixtures for setup and isolation.
-- Prefer `monkeypatch`/fakes for external SDK behavior in unit tests.
-- Do not use `MagicMock` unless testing 3rd-party API interactions is required.
-- Cover both happy-path and failure-path behavior.
-- Keep tests independent and deterministic.
-- Use descriptive test names and clear assertions.
+## Code Style
+
+- Line length: 120 (ruff).
+- Docstrings: Google style.
+- Quotes: double.
+- Tests: use `pytest.mark.parametrize` for matrix scenarios, `monkeypatch`/fakes over `MagicMock`, cover both happy and failure paths.
