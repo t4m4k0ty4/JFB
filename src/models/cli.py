@@ -19,11 +19,13 @@ from models.repositories.schema import SchemaRepository
 LOGGER = logging.getLogger("jfb.cli")
 DEFAULT_API_HOST = "localhost:1234"
 OUTPUT_SUFFIXES = {".csv", ".xlsx"}
+DEFAULT_BENCHMARK_PATH = Path(__file__).parent.parent.parent / ".benchmark-runs"
 
 
 @click.command()
 @click.argument(
     "path",
+    required=False,
     type=click.Path(path_type=Path, file_okay=False, dir_okay=True, resolve_path=False),
 )
 @click.argument(
@@ -73,7 +75,7 @@ OUTPUT_SUFFIXES = {".csv", ".xlsx"}
     help="Set explicit log level. Overrides --verbose/--quiet.",
 )
 def main(
-    path: Path,
+    path: Path | None,
     provider: str | None,
     run_config: Path | None,
     output_path: Path | None,
@@ -102,6 +104,8 @@ def main(
         log_level,
     )
 
+    path = path or DEFAULT_BENCHMARK_PATH
+    LOGGER.info("No PATH provided, using default benchmark directory: %s", path)
     if _is_init_only_mode(provider=provider, run_config=run_config, output_path=output_path):
         if not create_new:
             raise click.UsageError("Use '--new PATH' to initialize a benchmark directory.")

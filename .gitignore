@@ -129,3 +129,6 @@ Temporary Items
 ### macOS Patch ###
 # iCloud generated files
 *.icloud
+
+# Benchmark results
+.benchmark-runs/
